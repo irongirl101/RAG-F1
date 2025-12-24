@@ -1,5 +1,5 @@
 import { title } from "process"
-import "./global.css"
+import "./assets/globals.css"
 import { Children } from "react"
 
 export const metadata = {
