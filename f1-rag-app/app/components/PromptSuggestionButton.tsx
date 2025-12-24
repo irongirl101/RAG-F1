@@ -2,7 +2,7 @@ import { text } from "stream/consumers"
 
 const PromptSuggestionButton = ({text, onClick}) =>{
     return(
-    <button className="promptButton" onClick={onClick}>
+    <button className="prompt-suggestion-button " onClick={onClick}>
         {text}
     </button>
 )
