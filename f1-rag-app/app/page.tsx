@@ -6,6 +6,7 @@ import { useChat } from "@ai-sdk/react";
 import Bubbles from "./components/bubbles";
 import PromptSuggestionsRow from "./components/PromptSuggestionsRow";
 import LoadingBubble from "./components/LoadingBubble";
+import "ai"
 
 const Home = () => {
   const {
