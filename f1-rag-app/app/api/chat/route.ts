@@ -3,7 +3,7 @@ import { DataAPIClient } from "@datastax/astra-db-ts";
 import { google } from "@ai-sdk/google";
 import { streamText } from "ai";
 
-// Environment Variables
+// env
 const {
   ASTRA_DB_NAMESPACE,
   ASTRA_DB_COLLECTION,
@@ -12,12 +12,11 @@ const {
   GOOGLE_API_KEY,
 } = process.env;
 
-// Initialize Google AI (for Embeddings)
-const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY || "");
+const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY!);
 
-// Initialize Astra DB
-const client = new DataAPIClient(ASTRA_DB_APPLICATION_TOKEN);
-const db = client.db(ASTRA_DB_API_ENDPOINT || "", {
+// Astra DB
+const client = new DataAPIClient(ASTRA_DB_APPLICATION_TOKEN!);
+const db = client.db(ASTRA_DB_API_ENDPOINT!, {
   keyspace: ASTRA_DB_NAMESPACE,
 });
 
@@ -28,54 +27,49 @@ export async function POST(req: Request) {
 
     let docContext = "";
 
-    // STEP 1: Generate embedding
+    // ---------- EMBEDDINGS ----------
     try {
-      const embeddingModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
-      const embeddingResult = await embeddingModel.embedContent(latestMessage);
-      const vector = embeddingResult.embedding.values;
+      const embeddingModel = genAI.getGenerativeModel({
+        model: "text-embedding-004",
+      });
 
-      // STEP 2: Query Astra DB
-      const collection = await db.collection(ASTRA_DB_COLLECTION || "");
-      const cursor = collection.find({}, { sort: { $vector: vector }, limit: 10 });
+      const embedding = await embeddingModel.embedContent(latestMessage);
+      const vector = embedding.embedding.values;
+
+      const collection = await db.collection(ASTRA_DB_COLLECTION!);
+      const cursor = collection.find({}, {
+        sort: { $vector: vector },
+        limit: 10,
+      });
+
       const documents = await cursor.toArray();
-      const docsMap = documents.map((doc) => doc.text);
-      docContext = JSON.stringify(docsMap);
-
+      docContext = documents.map(d => d.text).join("\n\n");
     } catch (err) {
-      console.error("Error querying Astra DB:", err);
-      docContext = "";
+      console.error("Vector search failed:", err);
     }
 
-    // STEP 3: System message for RAG
-    const systemMessage = {
-      role: "system",
-      parts: [
-        {
-          type: "text",
-          text: `
+    // ---------- SYSTEM PROMPT ----------
+    const systemPrompt = `
 You are an AI assistant who knows everything about Formula One.
-Use the below context to augment your answers.
 
---------------
-START CONTEXT
+Use the context below to answer the user's question.
+If the context is insufficient, answer from general knowledge.
+Do not mention sources or the context itself.
+
+CONTEXT:
 ${docContext}
-END CONTEXT
---------------
-`
-        }
-      ]
-    };
+`;
 
-    // Stream response
+    // ---------- STREAM RESPONSE ----------
     const result = await streamText({
-      model:"google/gemini-1.5-flash",
-      messages: [systemMessage, ...messages], // Pass conversation directly
-    });
+  model: google("models/gemini-1.5-flash"),
+  prompt: systemPrompt + "\n\nUser: " + latestMessage,
+  });
 
-    return result.toDataStreamResponse();
+    return result.toTextStreamResponse();
 
   } catch (err) {
-    console.error("Error in POST route:", err);
+    console.error("Chat API error:", err);
     return new Response("Internal Server Error", { status: 500 });
   }
 }

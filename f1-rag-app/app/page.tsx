@@ -4,63 +4,61 @@ import Image from "next/image";
 import f1 from "./assets/f1.webp";
 import { useChat } from "@ai-sdk/react";
 import Bubbles from "./components/bubbles";
-import PromptSuggestionsRow from "./components/PromptSuggestionsRow";
 import LoadingBubble from "./components/LoadingBubble";
-import "ai"
+import PromptSuggestionsRow from "./components/PromptSuggestionsRow";
 
-const Home = () => {
+export default function Home() {
   const {
-    append,
     messages,
-    isLoading,
     input,
     handleInputChange,
     handleSubmit,
-  } = useChat({ api: "/api/chat" });
+    isLoading,
+  } = useChat({
+    api: "/api/chat",
+    streamMode:"text"
+  });
 
   const noMessages = messages.length === 0;
-
-  const handlePrompt = (promptText: string) => {
-    append({
-      role: "user",
-      content: promptText,
-    });
-    handleSubmit();
-  };
-
+  console.log(messages)
   return (
     <main>
       <Image src={f1} width={250} alt="logo" />
+
       <section className={noMessages ? "" : "populated"}>
         {noMessages ? (
           <>
             <p className="starter-text">
               Testing out a F1 RAG using Gemini API
             </p>
-            <PromptSuggestionsRow onPromptClick={handlePrompt} />
+            <PromptSuggestionsRow
+              onPromptClick={(prompt) => {
+                handleSubmit(undefined, {
+                  data: { prompt },
+                });
+              }}
+            />
           </>
         ) : (
           <>
             {messages.map((message) => (
-              <Bubbles key={message.id} message={message} />
+              <Bubbles key={message.role} message={message.content} />
             ))}
             {isLoading && <LoadingBubble />}
           </>
         )}
+
         <form onSubmit={handleSubmit}>
           <input
             className="question-box"
             type="text"
-            onChange={handleInputChange}
             value={input}
+            onChange={handleInputChange}
             placeholder="Ask any F1 question"
-            disabled={isLoading}
           />
           <input type="submit" />
         </form>
       </section>
     </main>
   );
-};
-
-export default Home;
+}

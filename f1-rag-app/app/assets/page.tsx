@@ -1,8 +1,8 @@
 "use client"
 import Image from "next/image"
 import f1 from "./assets/f1.jpeg"
-import {useChat} from "ai/react"
-import {message} from "ai"
+import {useChat} from "@ai-sdk/react"
+import "ai"
 
 const Home = ()=>{
   return(
