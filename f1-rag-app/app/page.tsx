@@ -43,6 +43,7 @@ export default function Home() {
           <>
             {messages.map((message) => (
               <Bubbles key={message.role} message={message.content} />
+              
             ))}
             {isLoading && <LoadingBubble />}
           </>
